@@ -265,54 +265,46 @@ Skills are user-invocable commands that can be called directly using the `/skill
 | `/playwright-cli`      | Token-efficient browser automation via Playwright CLI (replaces Playwright MCP) |
 | `/backlog-api`         | Interact with Backlog project management via REST API (curl-based)              |
 
-## Quick Install (curl)
+## Quick Setup (curl)
 
-You can quickly download and set up the configuration files using curl without cloning the repository.
+Download common settings into your project repository's `.claude/` directory. Run this from your project root.
 
-> **WARNING: This will overwrite existing files!**
->
-> If you have already customized files such as `~/.claude/CLAUDE.md`, `~/.claude/settings.json`, or any files in `~/.claude/agents/` or `~/.claude/skills/`, **they will be overwritten and your custom settings will be lost**.
->
-> **Before running these commands:**
-> 1. Back up your existing `~/.claude/` directory: `cp -r ~/.claude ~/.claude.backup`
-> 2. Or selectively download only the files you need
+> **Note:** Project-specific files (your own skills, customized settings.json, .mcp.json) are **not** affected — only common files (agents, hooks, shared skills) are overwritten.
 
-### Download All Files
+### Download All Common Files
 
 ```bash
 BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+TARGET=".claude"
 
 # Create necessary directories
-mkdir -p ~/.claude/{agents,hooks}
-mkdir -p ~/.claude/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
-
-# Download main configuration files
-curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
-curl -o ~/.claude/settings.json "$BASE/settings.json"
-curl -o ~/.claude/.mcp.json "$BASE/.mcp.json"
+mkdir -p "$TARGET"/{agents,hooks}
+mkdir -p "$TARGET"/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
 
 # Download hooks
-curl -o ~/.claude/hooks/block-destructive-git.sh "$BASE/hooks/block-destructive-git.sh"
-chmod +x ~/.claude/hooks/block-destructive-git.sh
+curl -o "$TARGET/hooks/block-destructive-git.sh" "$BASE/hooks/block-destructive-git.sh"
+chmod +x "$TARGET/hooks/block-destructive-git.sh"
 
 # Download agents
 for f in backend-design-expert backend-implementation-engineer frontend-design-expert frontend-implementation-engineer; do
-  curl -o ~/.claude/agents/$f.md "$BASE/agents/$f.md"
+  curl -o "$TARGET/agents/$f.md" "$BASE/agents/$f.md"
 done
 
-# Download skills
+# Download common skills
 for skill in bug-investigation code-review codex design-principles humanize-text kill-dev-process backlog-api; do
-  curl -o ~/.claude/skills/$skill/SKILL.md "$BASE/skills/$skill/SKILL.md"
+  curl -o "$TARGET/skills/$skill/SKILL.md" "$BASE/skills/$skill/SKILL.md"
 done
 
 # Download playwright-cli skill + references
-curl -o ~/.claude/skills/playwright-cli/SKILL.md "$BASE/skills/playwright-cli/SKILL.md"
+curl -o "$TARGET/skills/playwright-cli/SKILL.md" "$BASE/skills/playwright-cli/SKILL.md"
 for ref in request-mocking running-code session-management storage-state test-generation tracing video-recording; do
-  curl -o ~/.claude/skills/playwright-cli/references/$ref.md "$BASE/skills/playwright-cli/references/$ref.md"
+  curl -o "$TARGET/skills/playwright-cli/references/$ref.md" "$BASE/skills/playwright-cli/references/$ref.md"
 done
 
-echo "Done. Configure API keys in ~/.claude/.mcp.json"
+echo "Done. Review and merge settings.json and .mcp.json manually."
 ```
+
+> **Note:** `settings.json` and `.mcp.json` are **not** downloaded automatically because they contain project-specific customizations. Merge changes from the source repository manually.
 
 ### Download Individual Files
 
@@ -320,14 +312,14 @@ If you only want specific files, you can download them individually:
 
 ```bash
 BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+TARGET=".claude"
 
-# Example: Download only the CLAUDE.md
-mkdir -p ~/.claude
-curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
+# Example: Download only a specific agent
+curl -o "$TARGET/agents/backend-design-expert.md" "$BASE/agents/backend-design-expert.md"
 
 # Example: Download only a specific skill
-mkdir -p ~/.claude/skills/code-review
-curl -o ~/.claude/skills/code-review/SKILL.md "$BASE/skills/code-review/SKILL.md"
+mkdir -p "$TARGET/skills/code-review"
+curl -o "$TARGET/skills/code-review/SKILL.md" "$BASE/skills/code-review/SKILL.md"
 ```
 
 ## Deployment to Project Repositories
