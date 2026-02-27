@@ -18,9 +18,9 @@ claude-code-settings/
 ├── README_ja.md       # 日本語版 README（このファイル）
 ├── agents/            # カスタムエージェント定義
 │   ├── backend-design-expert.md           # バックエンド/API 設計エキスパート
-│   ├── backend-implementation-engineer.md # Hono + TypeScript バックエンド実装
+│   ├── backend-implementation-engineer.md # フレームワーク非依存バックエンド実装
 │   ├── frontend-design-expert.md          # フロントエンド設計レビュアー
-│   └── frontend-implementation-engineer.md # Svelte 5 + SvelteKit 実装
+│   └── frontend-implementation-engineer.md # フレームワーク非依存フロントエンド実装
 ├── settings.json      # Claude Code 設定ファイル
 ├── skills/            # スキル定義
 │   ├── bug-investigation/
@@ -35,9 +35,13 @@ claude-code-settings/
 │   │   └── SKILL.md   # AI 文章の自然な日本語化スキル
 │   ├── kill-dev-process/
 │   │   └── SKILL.md   # 開発プロセスクリーンアップスキル
-│   └── playwright-cli/
-│       ├── SKILL.md   # Playwright CLI によるブラウザ自動化（トークン効率重視）
-│       └── references/ # 詳細リファレンスドキュメント
+│   ├── playwright-cli/
+│   │   ├── SKILL.md   # Playwright CLI によるブラウザ自動化（トークン効率重視）
+│   │   └── references/ # 詳細リファレンスドキュメント
+│   └── backlog-api/
+│       └── SKILL.md   # Backlog REST API 操作スキル
+├── hooks/             # Git 安全フック
+│   └── block-destructive-git.sh  # 破壊的 git コマンドをブロック
 └── symlinks/          # 外部ツール設定ファイル（シンボリックリンク）
     ├── claude.json    # Claude Code ユーザー統計・設定キャッシュ
     ├── ccmanager/     # → ~/.config/ccmanager（CCManager 設定）
@@ -138,7 +142,7 @@ Claude Code の組み込み機能である Plan Mode と AskUserQuestion を活�
 - フロントエンド機能は Playwright CLI（`playwright-cli` via Bash）で検証
 - コンソールログ・ネットワーク確認には `playwright-cli console` / `playwright-cli network` を使用
 - 意思決定には AskUserQuestion を使用
-- 一時的な設計メモは `.tmp` に作成
+- 一時ファイルは `.tmp` ディレクトリに保存（プロジェクト内のどこにでも配置可能）
 - 批判的に応答し忖度しないが、強引な批判はしない
 - タスク発生時は常にタスク管理システムを起動
 - チーム編成: Lead + Reviewer（Claude Code エージェント）と Implementer + Tester（Codex CLI via `/codex`）
@@ -150,8 +154,10 @@ Claude Code の組み込み機能である Plan Mode と AskUserQuestion を活�
 | サーバー | 説明 |
 | --- | --- |
 | **context7** | ライブラリの最新ドキュメントとコード例 |
+| **chrome-devtools** | DevTools Protocol 直接アクセス（CPU/ネットワークエミュレーション等） |
+| **sentry** | Seer AI によるエラー分析、自然言語 Issue 検索 |
 
-> **注意:** ブラウザ自動化は以前 Playwright MCP と Chrome DevTools MCP を使用していましたが、トークン効率の大幅な改善（約4倍削減）のため **Playwright CLI**（`@playwright/cli`）に移行しました。使い方は `skills/playwright-cli/` スキルを参照してください。
+> **注意:** ブラウザ自動化は **Playwright CLI**（`@playwright/cli`）を使用し、トークン消費を約4分の1に削減しています。`skills/playwright-cli/` スキルを参照してください。Chrome DevTools MCP は Playwright CLI では代替困難な DevTools Protocol 機能のために残しています。
 
 ### settings.json
 
@@ -175,8 +181,8 @@ Claude Code の動作を制御する設定ファイル：
 
 **allow（許可リスト）**:
 - ファイル読み取り: `Read(**)`
-- 特定ディレクトリへの書き込み: `Write(src/**)`, `Write(docs/**)`, `Write(.tmp/**)`
-- パッケージ管理: `pnpm install`, `pnpm run test`, `pnpm run build`
+- 特定ディレクトリへの書き込み: `Write(src/**)`, `Write(docs/**)`, `Write(**/.tmp/**)`
+- パッケージ管理: `npm`/`pnpm`/`yarn` の install, test, build
 - ファイル操作: `rm`
 - 基本的なシェルコマンド: `ls`, `cat`, `head`, `tail`, `pwd`, `find`, `tree`, `mkdir`, `mv`
 - Docker 操作: `docker compose up -d --build`
@@ -194,6 +200,9 @@ Claude Code の動作を制御する設定ファイル：
 
 #### フック設定（`hooks`）
 
+**PreToolUse**（ツール実行前の安全フック）
+- `block-destructive-git.sh` が `git reset`、`git checkout .`、`git clean`、`git restore`、`git stash drop` をブロックし、意図しないデータ消失を防止。worktree 内のコマンドは許可。
+
 **PostToolUse**（ツール使用後の自動処理）
 - JS/TS/JSON/TSX ファイル編集時に Prettier で自動フォーマット
 
@@ -208,13 +217,15 @@ Claude Code の動作を制御する設定ファイル：
 `.mcp.json` で定義された MCP サーバーのうち、有効化するものを制御します。
 
 - **context7** - ライブラリの最新ドキュメントとコード例
+- **chrome-devtools** - DevTools Protocol 直接アクセス
+- **sentry** - AI によるエラー分析と Issue 検索
 
 #### その他の設定
 - `cleanupPeriodDays`: 20 - 古いデータのクリーンアップ期間
 - `enableAllProjectMcpServers`: true - すべてのプロジェクト固有 MCP サーバーを有効化
 - `language`: "Japanese" - インターフェース言語
 - `alwaysThinkingEnabled`: true - 常に思考プロセスを表示
-- `enabledPlugins`: コードインテリジェンス強化のための LSP プラグイン（rust-analyzer、typescript、pyright）
+- `enabledPlugins`: Playwright CLI プラグイン + コードインテリジェンス強化のための LSP プラグイン（rust-analyzer、typescript、pyright）
 
 ### カスタムエージェント（agents/）
 
@@ -223,9 +234,9 @@ Claude Code の動作を制御する設定ファイル：
 | エージェント                       | 説明                                                                                           |
 | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
 | `backend-design-expert`            | 仕様優先設計と運用正確性のためのコード非依存バックエンド/API エキスパート                      |
-| `backend-implementation-engineer`  | クリーンアーキテクチャで Hono + TypeScript を使用したバックエンド HTTP API を実装              |
+| `backend-implementation-engineer`  | フレームワーク非依存のバックエンド実装（レイヤードアーキテクチャ、プロジェクト CLAUDE.md 参照）|
 | `frontend-design-expert`           | SPA/SSR アプリ向けのコード非依存フロントエンドレビュアー、アーキテクチャとパフォーマンスを監査 |
-| `frontend-implementation-engineer` | Svelte 5 + SvelteKit + TypeScript を使用した本番対応 Web アプリを実装                          |
+| `frontend-implementation-engineer` | フレームワーク非依存のフロントエンド実装（コンポーネントアーキテクチャ、プロジェクト CLAUDE.md 参照）|
 
 ### 公式プラグイン
 
@@ -250,6 +261,7 @@ Claude Code は、コードインテリジェンスを強化するための公�
 | `/humanize-text`       | AI が書いた日本語を自然な人間らしい日本語に書き換え                                     |
 | `/kill-dev-process`    | 開発中に残った不要なサーバー、ブラウザ、ポート占有プロセスを停止                        |
 | `/playwright-cli`      | Playwright CLI によるトークン効率的なブラウザ自動化（Playwright MCP の後継）            |
+| `/backlog-api`         | Backlog REST API 経由のプロジェクト管理操作（curl ベース）                              |
 
 ## クイックインストール（curl）
 
@@ -266,43 +278,38 @@ Claude Code は、コードインテリジェンスを強化するための公�
 ### すべてのファイルをダウンロード
 
 ```bash
+BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+
 # 必要なディレクトリを作成
-mkdir -p ~/.claude/agents
-mkdir -p ~/.claude/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli}
+mkdir -p ~/.claude/{agents,hooks}
+mkdir -p ~/.claude/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
 
 # メイン設定ファイルをダウンロード
-curl -o ~/.claude/CLAUDE.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/CLAUDE.md
-curl -o ~/.claude/settings.json \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/settings.json
-curl -o ~/.claude/.mcp.json \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/.mcp.json
+curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
+curl -o ~/.claude/settings.json "$BASE/settings.json"
+curl -o ~/.claude/.mcp.json "$BASE/.mcp.json"
+
+# フックをダウンロード
+curl -o ~/.claude/hooks/block-destructive-git.sh "$BASE/hooks/block-destructive-git.sh"
+chmod +x ~/.claude/hooks/block-destructive-git.sh
 
 # エージェントをダウンロード
-curl -o ~/.claude/agents/backend-design-expert.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/backend-design-expert.md
-curl -o ~/.claude/agents/backend-implementation-engineer.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/backend-implementation-engineer.md
-curl -o ~/.claude/agents/frontend-design-expert.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/frontend-design-expert.md
-curl -o ~/.claude/agents/frontend-implementation-engineer.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/frontend-implementation-engineer.md
+for f in backend-design-expert backend-implementation-engineer frontend-design-expert frontend-implementation-engineer; do
+  curl -o ~/.claude/agents/$f.md "$BASE/agents/$f.md"
+done
 
 # スキルをダウンロード
-curl -o ~/.claude/skills/bug-investigation/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/bug-investigation/SKILL.md
-curl -o ~/.claude/skills/code-review/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/code-review/SKILL.md
-curl -o ~/.claude/skills/codex/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/codex/SKILL.md
-curl -o ~/.claude/skills/design-principles/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/design-principles/SKILL.md
-curl -o ~/.claude/skills/humanize-text/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/humanize-text/SKILL.md
-curl -o ~/.claude/skills/kill-dev-process/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/kill-dev-process/SKILL.md
-curl -o ~/.claude/skills/playwright-cli/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/playwright-cli/SKILL.md
+for skill in bug-investigation code-review codex design-principles humanize-text kill-dev-process backlog-api; do
+  curl -o ~/.claude/skills/$skill/SKILL.md "$BASE/skills/$skill/SKILL.md"
+done
+
+# playwright-cli スキル + リファレンスをダウンロード
+curl -o ~/.claude/skills/playwright-cli/SKILL.md "$BASE/skills/playwright-cli/SKILL.md"
+for ref in request-mocking running-code session-management storage-state test-generation tracing video-recording; do
+  curl -o ~/.claude/skills/playwright-cli/references/$ref.md "$BASE/skills/playwright-cli/references/$ref.md"
+done
+
+echo "完了。~/.claude/.mcp.json の API キーを設定してください。"
 ```
 
 ### 個別ファイルのダウンロード
@@ -310,15 +317,15 @@ curl -o ~/.claude/skills/playwright-cli/SKILL.md \
 特定のファイルのみが必要な場合は、個別にダウンロードできます：
 
 ```bash
+BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+
 # 例: CLAUDE.md のみをダウンロード
 mkdir -p ~/.claude
-curl -o ~/.claude/CLAUDE.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/CLAUDE.md
+curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
 
 # 例: 特定のスキルのみをダウンロード
 mkdir -p ~/.claude/skills/code-review
-curl -o ~/.claude/skills/code-review/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/code-review/SKILL.md
+curl -o ~/.claude/skills/code-review/SKILL.md "$BASE/skills/code-review/SKILL.md"
 ```
 
 ## 参考リンク

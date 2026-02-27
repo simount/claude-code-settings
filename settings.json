@@ -15,10 +15,16 @@
       "Read(**)",
       "Write(src/**)",
       "Write(docs/**)",
-      "Write(.tmp/**)",
+      "Write(**/.tmp/**)",
+      "Bash(npm install:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run build:*)",
       "Bash(pnpm install:*)",
       "Bash(pnpm run test:*)",
       "Bash(pnpm run build:*)",
+      "Bash(yarn install:*)",
+      "Bash(yarn test:*)",
+      "Bash(yarn build:*)",
       "Bash(rm:*)",
       "Bash(ls:*)",
       "Bash(cat:*:*)",
@@ -59,8 +65,20 @@
     ]
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": ["context7"],
+  "enabledMcpjsonServers": ["context7", "chrome-devtools", "sentry"],
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/.claude/hooks/block-destructive-git.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit",
@@ -96,6 +114,7 @@
     ]
   },
   "enabledPlugins": {
+    "playwright-cli@playwright-cli": true,
     "rust-analyzer-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
     "pyright-lsp@claude-plugins-official": true

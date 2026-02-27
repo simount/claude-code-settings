@@ -20,9 +20,9 @@ claude-code-settings/
 ├── README_ja.md       # Japanese version
 ├── agents/            # Custom agent definitions
 │   ├── backend-design-expert.md           # Backend/API design expert
-│   ├── backend-implementation-engineer.md # Hono + TypeScript backend implementation
+│   ├── backend-implementation-engineer.md # Framework-agnostic backend implementation
 │   ├── frontend-design-expert.md          # Frontend design reviewer
-│   └── frontend-implementation-engineer.md # Svelte 5 + SvelteKit implementation
+│   └── frontend-implementation-engineer.md # Framework-agnostic frontend implementation
 ├── settings.json      # Claude Code configuration file
 ├── skills/            # Skill definitions
 │   ├── bug-investigation/
@@ -37,9 +37,13 @@ claude-code-settings/
 │   │   └── SKILL.md   # AI-written Japanese text humanization skill
 │   ├── kill-dev-process/
 │   │   └── SKILL.md   # Dev process cleanup skill
-│   └── playwright-cli/
-│       ├── SKILL.md   # Browser automation via Playwright CLI (token-efficient)
-│       └── references/ # Detailed reference docs
+│   ├── playwright-cli/
+│   │   ├── SKILL.md   # Browser automation via Playwright CLI (token-efficient)
+│   │   └── references/ # Detailed reference docs
+│   └── backlog-api/
+│       └── SKILL.md   # Backlog project management via REST API
+├── hooks/             # Git safety hooks
+│   └── block-destructive-git.sh  # Blocks destructive git commands
 └── symlinks/          # External tools config files as symbolic links
     ├── claude.json    # Claude Code user stats and settings cache
     ├── ccmanager/     # → ~/.config/ccmanager (CCManager configuration)
@@ -140,7 +144,7 @@ Defines global user guidelines. Contains the following content:
 - Verify frontend functionality with Playwright CLI (`playwright-cli` via Bash)
 - Use `playwright-cli console` and `playwright-cli network` for console logs and network requests
 - Use AskUserQuestion for decision-making
-- Create temporary design notes in `.tmp`
+- Use `.tmp` directories for temporary files (can be placed anywhere in the project tree)
 - Respond critically without pandering, but not forcefully
 - Always launch the task management system for tasks
 - Team formation: Lead + Reviewer (Claude Code agents) and Implementer + Tester (Codex CLI via `/codex`)
@@ -152,8 +156,10 @@ Defines MCP (Model Context Protocol) servers available for use:
 | Server | Description |
 | --- | --- |
 | **context7** | Up-to-date documentation and code examples for libraries |
+| **chrome-devtools** | DevTools Protocol direct access (CPU/network emulation, etc.) |
+| **sentry** | AI-powered error analysis with Seer, natural language issue search |
 
-> **Note:** Browser automation previously used Playwright MCP and Chrome DevTools MCP servers, but has been migrated to **Playwright CLI** (`@playwright/cli`) for significantly better token efficiency (~4x reduction). See the `skills/playwright-cli/` skill for usage.
+> **Note:** Browser automation uses **Playwright CLI** (`@playwright/cli`) instead of Playwright MCP for ~4x token reduction. See the `skills/playwright-cli/` skill for usage. Chrome DevTools MCP is kept for DevTools Protocol features not available through Playwright CLI.
 
 ### settings.json
 
@@ -177,8 +183,8 @@ Configuration file that controls Claude Code behavior:
 
 **allow (allowlist)**:
 - File reading: `Read(**)`
-- Writing to specific directories: `Write(src/**)`, `Write(docs/**)`, `Write(.tmp/**)`
-- Package management: `pnpm install`, `pnpm run test`, `pnpm run build`
+- Writing to specific directories: `Write(src/**)`, `Write(docs/**)`, `Write(**/.tmp/**)`
+- Package management: `npm`/`pnpm`/`yarn` install, test, build
 - File operations: `rm`
 - Basic shell commands: `ls`, `cat`, `head`, `tail`, `pwd`, `find`, `tree`, `mkdir`, `mv`
 - Docker operations: `docker compose up -d --build`
@@ -196,6 +202,9 @@ Configuration file that controls Claude Code behavior:
 
 #### Hook Configuration (`hooks`)
 
+**PreToolUse** (Safety hooks before tool execution)
+- `block-destructive-git.sh` blocks `git reset`, `git checkout .`, `git clean`, `git restore`, `git stash drop` to prevent accidental data loss. Commands inside worktrees are allowed.
+
 **PostToolUse** (Automatic processing after tool use)
 - Automatic Prettier formatting when editing JS/TS/JSON/TSX files
 
@@ -210,13 +219,15 @@ Configuration file that controls Claude Code behavior:
 Controls which MCP servers defined in `.mcp.json` are activated.
 
 - **context7** - Up-to-date documentation and code examples for libraries
+- **chrome-devtools** - DevTools Protocol direct access
+- **sentry** - AI-powered error analysis and issue search
 
 #### Additional Configuration
 - `cleanupPeriodDays`: 20 - Cleanup period for old data
 - `enableAllProjectMcpServers`: true - Enable all project-specific MCP servers
 - `language`: "Japanese" - Interface language
 - `alwaysThinkingEnabled`: true - Always show thinking process
-- `enabledPlugins`: LSP plugins for enhanced code intelligence (rust-analyzer, typescript, pyright)
+- `enabledPlugins`: Playwright CLI plugin + LSP plugins for enhanced code intelligence (rust-analyzer, typescript, pyright)
 
 ### Custom Agents (agents/)
 
@@ -225,9 +236,9 @@ Custom agents provide specialized capabilities for specific development tasks. T
 | Agent                              | Description                                                                                 |
 | ---------------------------------- | ------------------------------------------------------------------------------------------- |
 | `backend-design-expert`            | Code-agnostic backend/API expert for specification-first design and operational correctness |
-| `backend-implementation-engineer`  | Implements backend HTTP APIs using Hono + TypeScript with clean architecture                |
+| `backend-implementation-engineer`  | Framework-agnostic backend implementation with layered architecture (reads project CLAUDE.md)|
 | `frontend-design-expert`           | Code-agnostic frontend reviewer for SPA/SSR apps, audits architecture and performance       |
-| `frontend-implementation-engineer` | Implements production-ready web apps using Svelte 5 + SvelteKit + TypeScript                |
+| `frontend-implementation-engineer` | Framework-agnostic frontend implementation with component architecture (reads project CLAUDE.md)|
 
 ### Official Plugins
 
@@ -252,6 +263,7 @@ Skills are user-invocable commands that can be called directly using the `/skill
 | `/humanize-text`       | Transform AI-written Japanese text into natural, human-like Japanese            |
 | `/kill-dev-process`    | Kill orphaned dev servers, browsers, and port-hogging processes                 |
 | `/playwright-cli`      | Token-efficient browser automation via Playwright CLI (replaces Playwright MCP) |
+| `/backlog-api`         | Interact with Backlog project management via REST API (curl-based)              |
 
 ## Quick Install (curl)
 
@@ -268,43 +280,38 @@ You can quickly download and set up the configuration files using curl without c
 ### Download All Files
 
 ```bash
+BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+
 # Create necessary directories
-mkdir -p ~/.claude/agents
-mkdir -p ~/.claude/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli}
+mkdir -p ~/.claude/{agents,hooks}
+mkdir -p ~/.claude/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
 
 # Download main configuration files
-curl -o ~/.claude/CLAUDE.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/CLAUDE.md
-curl -o ~/.claude/settings.json \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/settings.json
-curl -o ~/.claude/.mcp.json \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/.mcp.json
+curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
+curl -o ~/.claude/settings.json "$BASE/settings.json"
+curl -o ~/.claude/.mcp.json "$BASE/.mcp.json"
+
+# Download hooks
+curl -o ~/.claude/hooks/block-destructive-git.sh "$BASE/hooks/block-destructive-git.sh"
+chmod +x ~/.claude/hooks/block-destructive-git.sh
 
 # Download agents
-curl -o ~/.claude/agents/backend-design-expert.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/backend-design-expert.md
-curl -o ~/.claude/agents/backend-implementation-engineer.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/backend-implementation-engineer.md
-curl -o ~/.claude/agents/frontend-design-expert.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/frontend-design-expert.md
-curl -o ~/.claude/agents/frontend-implementation-engineer.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/agents/frontend-implementation-engineer.md
+for f in backend-design-expert backend-implementation-engineer frontend-design-expert frontend-implementation-engineer; do
+  curl -o ~/.claude/agents/$f.md "$BASE/agents/$f.md"
+done
 
 # Download skills
-curl -o ~/.claude/skills/bug-investigation/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/bug-investigation/SKILL.md
-curl -o ~/.claude/skills/code-review/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/code-review/SKILL.md
-curl -o ~/.claude/skills/codex/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/codex/SKILL.md
-curl -o ~/.claude/skills/design-principles/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/design-principles/SKILL.md
-curl -o ~/.claude/skills/humanize-text/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/humanize-text/SKILL.md
-curl -o ~/.claude/skills/kill-dev-process/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/kill-dev-process/SKILL.md
-curl -o ~/.claude/skills/playwright-cli/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/playwright-cli/SKILL.md
+for skill in bug-investigation code-review codex design-principles humanize-text kill-dev-process backlog-api; do
+  curl -o ~/.claude/skills/$skill/SKILL.md "$BASE/skills/$skill/SKILL.md"
+done
+
+# Download playwright-cli skill + references
+curl -o ~/.claude/skills/playwright-cli/SKILL.md "$BASE/skills/playwright-cli/SKILL.md"
+for ref in request-mocking running-code session-management storage-state test-generation tracing video-recording; do
+  curl -o ~/.claude/skills/playwright-cli/references/$ref.md "$BASE/skills/playwright-cli/references/$ref.md"
+done
+
+echo "Done. Configure API keys in ~/.claude/.mcp.json"
 ```
 
 ### Download Individual Files
@@ -312,15 +319,15 @@ curl -o ~/.claude/skills/playwright-cli/SKILL.md \
 If you only want specific files, you can download them individually:
 
 ```bash
+BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+
 # Example: Download only the CLAUDE.md
 mkdir -p ~/.claude
-curl -o ~/.claude/CLAUDE.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/CLAUDE.md
+curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
 
 # Example: Download only a specific skill
 mkdir -p ~/.claude/skills/code-review
-curl -o ~/.claude/skills/code-review/SKILL.md \
-  https://raw.githubusercontent.com/nokonoko1203/claude-code-settings/main/skills/code-review/SKILL.md
+curl -o ~/.claude/skills/code-review/SKILL.md "$BASE/skills/code-review/SKILL.md"
 ```
 
 ## References
