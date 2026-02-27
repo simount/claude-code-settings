@@ -328,6 +328,80 @@ mkdir -p ~/.claude/skills/code-review
 curl -o ~/.claude/skills/code-review/SKILL.md "$BASE/skills/code-review/SKILL.md"
 ```
 
+## プロジェクトリポジトリへのデプロイ
+
+このリポジトリは、simount 組織全体で共有する Claude Code 設定の正規ソースです。共通設定は各プロジェクトリポジトリの `.claude/` ディレクトリにコミットし、チームメンバーは `git pull` で更新を受け取ります。
+
+### ワークフロー概要
+
+```
+simount/claude-code-settings（正規ソース）
+        │
+        │  担当者1名がマージ・反映
+        ▼
+各プロジェクトリポ .claude/（コミット済み、共通+固有が混在）
+        │
+        │  git pull
+        ▼
+チームメンバー全員に適用
+```
+
+### デプロイ対象
+
+各プロジェクトリポジトリの `.claude/` には**共通ファイル**（本リポジトリ由来）と**プロジェクト固有ファイル**が混在します:
+
+| 種別 | 例 |
+| --- | --- |
+| **共通**（本リポジトリ由来） | `agents/`, `hooks/`, 共通スキル（bug-investigation, code-review, codex, design-principles, humanize-text, kill-dev-process, playwright-cli, backlog-api） |
+| **プロジェクト固有**（各プロジェクトで管理） | プロジェクト独自スキル、プロジェクト固有の settings.json, .mcp.json カスタマイズ |
+
+### デプロイ手順
+
+担当者は1名。本リポジトリの更新とプロジェクトへの反映を一貫して行います。
+
+1. **本リポジトリを更新** — `simount/claude-code-settings` を変更（`nokonoko1203/claude-code-settings` からの upstream マージ、または simount 固有の改善）
+2. **共通ファイルをプロジェクトに反映** — 各プロジェクトリポの `.claude/` に共通ファイルをコピー。agents, hooks, 共通 skills は上書き。`settings.json` と `.mcp.json` はプロジェクト固有カスタマイズがあるため手動マージ
+3. **プロジェクトリポにコミット** — チームは `git pull` で更新を受け取る
+
+```bash
+# 例: プロジェクトリポに共通ファイルを同期
+SOURCE="/path/to/claude-code-settings"
+TARGET="/path/to/project-repo/.claude"
+
+# エージェント（全上書き）
+cp -r "$SOURCE/agents/" "$TARGET/agents/"
+
+# フック（全上書き）
+cp -r "$SOURCE/hooks/" "$TARGET/hooks/"
+
+# 共通スキル（名前指定で上書き、プロジェクト固有スキルは触らない）
+for skill in bug-investigation code-review codex design-principles humanize-text kill-dev-process backlog-api; do
+  mkdir -p "$TARGET/skills/$skill"
+  cp -r "$SOURCE/skills/$skill/" "$TARGET/skills/$skill/"
+done
+cp -r "$SOURCE/skills/playwright-cli/" "$TARGET/skills/playwright-cli/"
+
+# settings.json, .mcp.json — 手動マージ（プロジェクト固有カスタマイズあり）
+echo "settings.json と .mcp.json は手動でマージしてください。"
+```
+
+### 本家（nokonoko1203）のマージ
+
+```bash
+# 初回セットアップ（1回のみ）
+git remote add upstream https://github.com/nokonoko1203/claude-code-settings.git
+
+# upstream の変更を取り込み
+git fetch upstream
+git merge upstream/main --no-edit
+```
+
+> **注意:** `agents/backend-implementation-engineer.md` と `agents/frontend-implementation-engineer.md` は大幅に再構成されています（フレームワーク非依存化）。upstream マージ時にはこれらのファイルで手動コンフリクト解消が必要です。その他のファイルは軽微なコンフリクトで済むはずです。
+
+### ユーザーレベル設定（`~/.claude/`）
+
+ユーザーレベル設定（個人の `~/.claude/CLAUDE.md`, `~/.claude/settings.json`）はこのデプロイワークフローの**対象外**です。各開発者が自身のユーザーレベル設定を独自に管理します。個人のセットアップには上記のクイックインストールを利用できます。
+
 ## 参考リンク
 
 - [Claude Code 概要](https://docs.anthropic.com/en/docs/claude-code)

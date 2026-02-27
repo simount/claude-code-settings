@@ -330,6 +330,80 @@ mkdir -p ~/.claude/skills/code-review
 curl -o ~/.claude/skills/code-review/SKILL.md "$BASE/skills/code-review/SKILL.md"
 ```
 
+## Deployment to Project Repositories
+
+This repository serves as the canonical source for shared Claude Code settings across the simount organization. Common settings are committed into each project repository's `.claude/` directory so that all team members receive updates via `git pull`.
+
+### Workflow Overview
+
+```
+simount/claude-code-settings (canonical source)
+        │
+        │  One designated person merges & applies
+        ▼
+Each project repo .claude/ (committed, common + project-specific coexist)
+        │
+        │  git pull
+        ▼
+All team members get the update
+```
+
+### What Gets Deployed
+
+Each project repository's `.claude/` directory contains both **common files** (from this repo) and **project-specific files**:
+
+| Type | Examples |
+| --- | --- |
+| **Common** (from this repo) | `agents/`, `hooks/`, shared skills (bug-investigation, code-review, codex, design-principles, humanize-text, kill-dev-process, playwright-cli, backlog-api) |
+| **Project-specific** (managed in each project) | Project's own skills, project-level settings.json, .mcp.json customizations |
+
+### Deployment Process
+
+A single designated person is responsible for both updating this repository and applying changes to project repositories.
+
+1. **Update this repo** — Make changes to `simount/claude-code-settings` (merge upstream changes from `nokonoko1203/claude-code-settings` or add simount-specific improvements)
+2. **Apply common files to each project** — Copy common files into the project repo's `.claude/` directory. Overwrite agents, hooks, and common skills. Manually merge `settings.json` and `.mcp.json` (these have project-specific customizations)
+3. **Commit to the project repo** — The team gets the update via `git pull`
+
+```bash
+# Example: sync common files to a project repo
+SOURCE="/path/to/claude-code-settings"
+TARGET="/path/to/project-repo/.claude"
+
+# Agents (full overwrite)
+cp -r "$SOURCE/agents/" "$TARGET/agents/"
+
+# Hooks (full overwrite)
+cp -r "$SOURCE/hooks/" "$TARGET/hooks/"
+
+# Common skills (by name, project-specific skills are untouched)
+for skill in bug-investigation code-review codex design-principles humanize-text kill-dev-process backlog-api; do
+  mkdir -p "$TARGET/skills/$skill"
+  cp -r "$SOURCE/skills/$skill/" "$TARGET/skills/$skill/"
+done
+cp -r "$SOURCE/skills/playwright-cli/" "$TARGET/skills/playwright-cli/"
+
+# settings.json, .mcp.json — manually merge (project-specific customizations exist)
+echo "Review and merge settings.json and .mcp.json manually."
+```
+
+### Merging Upstream (nokonoko1203)
+
+```bash
+# Initial setup (once)
+git remote add upstream https://github.com/nokonoko1203/claude-code-settings.git
+
+# Merge upstream changes
+git fetch upstream
+git merge upstream/main --no-edit
+```
+
+> **Note:** `agents/backend-implementation-engineer.md` and `agents/frontend-implementation-engineer.md` have been significantly restructured (framework-agnostic). These will require manual conflict resolution when merging upstream. Other files should have minimal conflicts.
+
+### User-Level Settings (`~/.claude/`)
+
+User-level settings (personal `~/.claude/CLAUDE.md`, `~/.claude/settings.json`) are **out of scope** for this deployment workflow. Each developer manages their own user-level settings independently. The Quick Install section above can be used for personal setup if desired.
+
 ## References
 
 - [Claude Code overview](https://docs.anthropic.com/en/docs/claude-code)
