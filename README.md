@@ -44,49 +44,34 @@ claude-code-settings/
 │       └── SKILL.md   # Backlog project management via REST API
 ├── hooks/             # Git safety hooks
 │   └── block-destructive-git.sh  # Blocks destructive git commands
-└── symlinks/          # External tools config files as symbolic links
+└── external/          # External tools configuration files
     ├── claude.json    # Claude Code user stats and settings cache
     ├── ccmanager/     # → ~/.config/ccmanager (CCManager configuration)
     │   ├── config.json     # CCManager settings and command presets
     │   └── init_worktree.sh # Worktree post-creation hook script
-    └── codex/         # → ~/.codex (Codex CLI configuration)
-        ├── AGENTS.md  # Codex project guidelines
-        ├── config.toml # Codex CLI configuration
-        └── skills/    # Codex skills (synced from Claude Code skills)
-            ├── bug-investigation/
-            ├── code-review/
-            ├── design-principles/
-            ├── humanize-text/
-            ├── kill-dev-process/
-            └── playwright-cli/
+    └── codex/         # Codex CLI configuration
+        └── config.toml # Codex CLI configuration
 ```
 
-## About the symlinks Folder
+## About the external Folder
 
-The `symlinks/` folder contains configuration files for various external tools related to Claude Code. Since Claude Code is frequently updated and configuration changes are common, having all configuration files centralized in one folder makes editing much easier. Even if related files are normally placed outside the `~/.claude/` directory, it's convenient to place them here as symbolic links for unified management.
-
-In actual environments, these files are placed as symbolic links in specified locations.
+The `external/` folder contains configuration files for various external tools related to Claude Code. These are user-level settings and are **out of scope** for the deployment workflow. Each developer should individually merge and manage these files in their own environment.
 
 ```bash
-# Link Claude Code configuration
-ln -s /path/to/settings.json ~/.claude/settings.json
+# Copy or merge external/ files into ~/.claude/external/
+cp -r external/ ~/.claude/external/
 
-# Link ccmanager configuration
-ln -s ~/.config/ccmanager ~/.claude/symlinks/ccmanager
-
-# Link Codex configuration
-ln -s ~/.codex ~/.claude/symlinks/codex
+# If using ccmanager, manage via symlink
+ln -s ~/.config/ccmanager ~/.claude/external/ccmanager
 ```
 
-This allows configuration changes to be managed in the repository and shared across multiple environments.
+### Codex CLI Compatibility
 
-### Codex Configuration (`symlinks/codex/`)
+Codex CLI is made compatible by creating a symlink `.codex -> .claude` in each project root (see [Quick Setup](#download-all-common-files)). This allows Codex CLI to share the same directory as Claude Code without maintaining separate configuration files.
 
-The `codex/` symlink contains Codex CLI configuration for use with `codex exec`:
+The `external/codex/` directory contains Codex-specific configuration that cannot be shared:
 
 - **`config.toml`** - Codex CLI settings including model selection, sandbox mode, MCP servers, and model providers
-- **`AGENTS.md`** - Project guidelines that Codex follows (similar to CLAUDE.md but without Claude Code-specific rules like team formation)
-- **`skills/`** - Codex-compatible versions of Claude Code skills (bug-investigation, code-review, design-principles, humanize-text, kill-dev-process, playwright-cli)
 
 ## Key Features
 
@@ -306,6 +291,9 @@ for ref in request-mocking running-code session-management storage-state test-ge
 done
 
 echo "Done. Review git diff to check for project-specific changes that need merging."
+
+# Create Codex CLI compatibility symlink
+ln -s .claude .codex
 ```
 
 > **Tip:** After downloading, use `git diff` to review changes. Settings files (`settings.json`, `.mcp.json`) may have project-specific customizations — merge as needed before committing.
@@ -381,6 +369,9 @@ cp -r "$SOURCE/skills/playwright-cli/" "$TARGET/skills/playwright-cli/"
 
 # settings.json, .mcp.json — manually merge (project-specific customizations exist)
 echo "Review and merge settings.json and .mcp.json manually."
+
+# Create Codex CLI compatibility symlink
+ln -s .claude .codex
 ```
 
 ### Merging Upstream (nokonoko1203)
@@ -404,7 +395,7 @@ git log upstream/main..main --oneline
 
 ### User-Level Settings (`~/.claude/`)
 
-User-level settings (personal `~/.claude/CLAUDE.md`, `~/.claude/settings.json`) are **out of scope** for this deployment workflow. Each developer manages their own user-level settings independently. The Quick Install section above can be used for personal setup if desired.
+User-level settings (personal `~/.claude/CLAUDE.md`, `~/.claude/settings.json`, `~/.claude/external/`) are **out of scope** for this deployment workflow. Each developer manages their own user-level settings independently. See [About the external Folder](#about-the-external-folder) for setup instructions.
 
 ## References
 

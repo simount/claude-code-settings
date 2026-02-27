@@ -42,49 +42,34 @@ claude-code-settings/
 │       └── SKILL.md   # Backlog REST API 操作スキル
 ├── hooks/             # Git 安全フック
 │   └── block-destructive-git.sh  # 破壊的 git コマンドをブロック
-└── symlinks/          # 外部ツール設定ファイル（シンボリックリンク）
+└── external/          # 外部ツール設定ファイル
     ├── claude.json    # Claude Code ユーザー統計・設定キャッシュ
     ├── ccmanager/     # → ~/.config/ccmanager（CCManager 設定）
     │   ├── config.json     # CCManager 設定・コマンドプリセット
     │   └── init_worktree.sh # ワークツリー作成後フックスクリプト
-    └── codex/         # → ~/.codex（Codex CLI 設定）
-        ├── AGENTS.md  # Codex プロジェクトガイドライン
-        ├── config.toml # Codex CLI 設定
-        └── skills/    # Codex スキル（Claude Code スキルと同期）
-            ├── bug-investigation/
-            ├── code-review/
-            ├── design-principles/
-            ├── humanize-text/
-            ├── kill-dev-process/
-            └── playwright-cli/
+    └── codex/         # Codex CLI 設定
+        └── config.toml # Codex CLI 設定
 ```
 
-## symlinks フォルダについて
+## external フォルダについて
 
-`symlinks/` フォルダには、Claude Code に関連する各種外部ツールの設定ファイルが含まれています。Claude Code は頻繁に更新され、設定変更も多いため、すべての設定ファイルを1つのフォルダに集約することで編集が容易になります。関連ファイルが通常 `~/.claude/` ディレクトリ外に配置される場合でも、シンボリックリンクとしてここに配置することで一元管理できます。
-
-実際の環境では、これらのファイルは指定された場所にシンボリックリンクとして配置されます。
+`external/` フォルダには、Claude Code に関連する各種外部ツールの設定ファイルが含まれています。これらはユーザーレベルの設定であり、デプロイワークフローの対象外です。各開発者が自身の環境に合わせて個別にマージ・管理してください。
 
 ```bash
-# Claude Code 設定をリンク
-ln -s /path/to/settings.json ~/.claude/settings.json
+# external/ 配下のファイルを ~/.claude/external/ にコピーまたはマージ
+cp -r external/ ~/.claude/external/
 
-# ccmanager 設定をリンク
-ln -s ~/.config/ccmanager ~/.claude/symlinks/ccmanager
-
-# Codex 設定をリンク
-ln -s ~/.codex ~/.claude/symlinks/codex
+# ccmanager を使用する場合はシンボリックリンクで管理
+ln -s ~/.config/ccmanager ~/.claude/external/ccmanager
 ```
 
-これにより、設定変更をリポジトリで管理し、複数の環境間で共有できます。
+### Codex CLI 互換
 
-### Codex 設定（`symlinks/codex/`）
+各プロジェクトルートで `.codex -> .claude` のシンボリックリンクを作成することで Codex CLI と互換にしています（[クイックセットアップ](#共通ファイルを一括ダウンロード)を参照）。これにより、個別の設定ファイルを保守せずに Codex CLI が Claude Code と同じディレクトリを共有できます。
 
-`codex/` シンボリックリンクには、`codex exec` で使用するための Codex CLI 設定が含まれます：
+`external/codex/` には共有できない Codex 固有の設定が含まれます：
 
 - **`config.toml`** - モデル選択、サンドボックスモード、MCP サーバー、モデルプロバイダーなどの Codex CLI 設定
-- **`AGENTS.md`** - Codex が従うプロジェクトガイドライン（CLAUDE.md に類似するが、チーム編成など Claude Code 固有のルールは除外）
-- **`skills/`** - Claude Code スキルの Codex 互換バージョン（bug-investigation、code-review、design-principles、humanize-text、kill-dev-process、playwright-cli）
 
 ## 主な機能
 
@@ -304,6 +289,9 @@ for ref in request-mocking running-code session-management storage-state test-ge
 done
 
 echo "完了。git diff で変更を確認してください。"
+
+# Codex CLI 互換シンボリックリンクを作成
+ln -s .claude .codex
 ```
 
 > **ヒント:** ダウンロード後、`git diff` で変更を確認してください。設定ファイル（`settings.json`、`.mcp.json`）にはプロジェクト固有のカスタマイズが含まれる場合があります。コミット前に必要に応じてマージしてください。
@@ -379,6 +367,9 @@ cp -r "$SOURCE/skills/playwright-cli/" "$TARGET/skills/playwright-cli/"
 
 # settings.json, .mcp.json — 手動マージ（プロジェクト固有カスタマイズあり）
 echo "settings.json と .mcp.json は手動でマージしてください。"
+
+# Codex CLI 互換シンボリックリンクを作成
+ln -s .claude .codex
 ```
 
 ### 本家（nokonoko1203）のマージ
@@ -402,7 +393,7 @@ git log upstream/main..main --oneline
 
 ### ユーザーレベル設定（`~/.claude/`）
 
-ユーザーレベル設定（個人の `~/.claude/CLAUDE.md`, `~/.claude/settings.json`）はこのデプロイワークフローの**対象外**です。各開発者が自身のユーザーレベル設定を独自に管理します。個人のセットアップには上記のクイックインストールを利用できます。
+ユーザーレベル設定（個人の `~/.claude/CLAUDE.md`, `~/.claude/settings.json`, `~/.claude/external/`）はこのデプロイワークフローの**対象外**です。各開発者が自身のユーザーレベル設定を独自に管理します。`external/` の設定手順は[external フォルダについて](#external-フォルダについて)を参照してください。
 
 ## 参考リンク
 
