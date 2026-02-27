@@ -279,6 +279,10 @@ TARGET=".claude"
 mkdir -p "$TARGET"/{agents,hooks}
 mkdir -p "$TARGET"/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
 
+# 設定ファイルをダウンロード
+curl -o "$TARGET/settings.json" "$BASE/settings.json"
+curl -o "$TARGET/.mcp.json" "$BASE/.mcp.json"
+
 # フックをダウンロード
 curl -o "$TARGET/hooks/block-destructive-git.sh" "$BASE/hooks/block-destructive-git.sh"
 chmod +x "$TARGET/hooks/block-destructive-git.sh"
@@ -299,10 +303,10 @@ for ref in request-mocking running-code session-management storage-state test-ge
   curl -o "$TARGET/skills/playwright-cli/references/$ref.md" "$BASE/skills/playwright-cli/references/$ref.md"
 done
 
-echo "完了。settings.json と .mcp.json は手動でマージしてください。"
+echo "完了。git diff で変更を確認してください。"
 ```
 
-> **注意:** `settings.json` と `.mcp.json` はプロジェクト固有のカスタマイズが含まれるため、自動ダウンロード**されません**。ソースリポジトリからの変更を手動でマージしてください。
+> **ヒント:** ダウンロード後、`git diff` で変更を確認してください。設定ファイル（`settings.json`、`.mcp.json`）にはプロジェクト固有のカスタマイズが含まれる場合があります。コミット前に必要に応じてマージしてください。
 
 ### 個別ファイルのダウンロード
 

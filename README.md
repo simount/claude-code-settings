@@ -281,6 +281,10 @@ TARGET=".claude"
 mkdir -p "$TARGET"/{agents,hooks}
 mkdir -p "$TARGET"/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
 
+# Download configuration files
+curl -o "$TARGET/settings.json" "$BASE/settings.json"
+curl -o "$TARGET/.mcp.json" "$BASE/.mcp.json"
+
 # Download hooks
 curl -o "$TARGET/hooks/block-destructive-git.sh" "$BASE/hooks/block-destructive-git.sh"
 chmod +x "$TARGET/hooks/block-destructive-git.sh"
@@ -301,10 +305,10 @@ for ref in request-mocking running-code session-management storage-state test-ge
   curl -o "$TARGET/skills/playwright-cli/references/$ref.md" "$BASE/skills/playwright-cli/references/$ref.md"
 done
 
-echo "Done. Review and merge settings.json and .mcp.json manually."
+echo "Done. Review git diff to check for project-specific changes that need merging."
 ```
 
-> **Note:** `settings.json` and `.mcp.json` are **not** downloaded automatically because they contain project-specific customizations. Merge changes from the source repository manually.
+> **Tip:** After downloading, use `git diff` to review changes. Settings files (`settings.json`, `.mcp.json`) may have project-specific customizations — merge as needed before committing.
 
 ### Download Individual Files
 
