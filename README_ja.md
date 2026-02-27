@@ -263,54 +263,50 @@ Claude Code は、コードインテリジェンスを強化するための公�
 | `/playwright-cli`      | Playwright CLI によるトークン効率的なブラウザ自動化（Playwright MCP の後継）            |
 | `/backlog-api`         | Backlog REST API 経由のプロジェクト管理操作（curl ベース）                              |
 
-## クイックインストール（curl）
+## クイックセットアップ（curl）
 
-リポジトリをクローンせずに、curl を使用して設定ファイルをすばやくダウンロードしてセットアップできます。
+プロジェクトリポジトリの `.claude/` ディレクトリに共通設定をダウンロードします。プロジェクトルートから実行してください。
 
-> **警告: 既存のファイルが上書きされます！**
->
-> すでに `~/.claude/CLAUDE.md`、`~/.claude/settings.json`、または `~/.claude/agents/` や `~/.claude/skills/` 内のファイルをカスタマイズしている場合、**それらは上書きされ、カスタム設定は失われます**。
->
-> **これらのコマンドを実行する前に：**
-> 1. 既存の `~/.claude/` ディレクトリをバックアップしてください: `cp -r ~/.claude ~/.claude.backup`
-> 2. または、必要なファイルのみを選択的にダウンロードしてください
+> **注意:** プロジェクト固有のファイル（独自スキル、カスタマイズ済み settings.json、.mcp.json）は**影響を受けません** — 共通ファイル（agents、hooks、共通スキル）のみが上書きされます。
 
-### すべてのファイルをダウンロード
+### 共通ファイルを一括ダウンロード
 
 ```bash
 BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+TARGET=".claude"
 
 # 必要なディレクトリを作成
-mkdir -p ~/.claude/{agents,hooks}
-mkdir -p ~/.claude/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
+mkdir -p "$TARGET"/{agents,hooks}
+mkdir -p "$TARGET"/skills/{bug-investigation,code-review,codex,design-principles,humanize-text,kill-dev-process,playwright-cli/references,backlog-api}
 
-# メイン設定ファイルをダウンロード
-curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
-curl -o ~/.claude/settings.json "$BASE/settings.json"
-curl -o ~/.claude/.mcp.json "$BASE/.mcp.json"
+# 設定ファイルをダウンロード
+curl -o "$TARGET/settings.json" "$BASE/settings.json"
+curl -o "$TARGET/.mcp.json" "$BASE/.mcp.json"
 
 # フックをダウンロード
-curl -o ~/.claude/hooks/block-destructive-git.sh "$BASE/hooks/block-destructive-git.sh"
-chmod +x ~/.claude/hooks/block-destructive-git.sh
+curl -o "$TARGET/hooks/block-destructive-git.sh" "$BASE/hooks/block-destructive-git.sh"
+chmod +x "$TARGET/hooks/block-destructive-git.sh"
 
 # エージェントをダウンロード
 for f in backend-design-expert backend-implementation-engineer frontend-design-expert frontend-implementation-engineer; do
-  curl -o ~/.claude/agents/$f.md "$BASE/agents/$f.md"
+  curl -o "$TARGET/agents/$f.md" "$BASE/agents/$f.md"
 done
 
-# スキルをダウンロード
+# 共通スキルをダウンロード
 for skill in bug-investigation code-review codex design-principles humanize-text kill-dev-process backlog-api; do
-  curl -o ~/.claude/skills/$skill/SKILL.md "$BASE/skills/$skill/SKILL.md"
+  curl -o "$TARGET/skills/$skill/SKILL.md" "$BASE/skills/$skill/SKILL.md"
 done
 
 # playwright-cli スキル + リファレンスをダウンロード
-curl -o ~/.claude/skills/playwright-cli/SKILL.md "$BASE/skills/playwright-cli/SKILL.md"
+curl -o "$TARGET/skills/playwright-cli/SKILL.md" "$BASE/skills/playwright-cli/SKILL.md"
 for ref in request-mocking running-code session-management storage-state test-generation tracing video-recording; do
-  curl -o ~/.claude/skills/playwright-cli/references/$ref.md "$BASE/skills/playwright-cli/references/$ref.md"
+  curl -o "$TARGET/skills/playwright-cli/references/$ref.md" "$BASE/skills/playwright-cli/references/$ref.md"
 done
 
-echo "完了。~/.claude/.mcp.json の API キーを設定してください。"
+echo "完了。git diff で変更を確認してください。"
 ```
+
+> **ヒント:** ダウンロード後、`git diff` で変更を確認してください。設定ファイル（`settings.json`、`.mcp.json`）にはプロジェクト固有のカスタマイズが含まれる場合があります。コミット前に必要に応じてマージしてください。
 
 ### 個別ファイルのダウンロード
 
@@ -318,14 +314,14 @@ echo "完了。~/.claude/.mcp.json の API キーを設定してください。"
 
 ```bash
 BASE="https://raw.githubusercontent.com/simount/claude-code-settings/main"
+TARGET=".claude"
 
-# 例: CLAUDE.md のみをダウンロード
-mkdir -p ~/.claude
-curl -o ~/.claude/CLAUDE.md "$BASE/CLAUDE.md"
+# 例: 特定のエージェントのみをダウンロード
+curl -o "$TARGET/agents/backend-design-expert.md" "$BASE/agents/backend-design-expert.md"
 
 # 例: 特定のスキルのみをダウンロード
-mkdir -p ~/.claude/skills/code-review
-curl -o ~/.claude/skills/code-review/SKILL.md "$BASE/skills/code-review/SKILL.md"
+mkdir -p "$TARGET/skills/code-review"
+curl -o "$TARGET/skills/code-review/SKILL.md" "$BASE/skills/code-review/SKILL.md"
 ```
 
 ## プロジェクトリポジトリへのデプロイ
