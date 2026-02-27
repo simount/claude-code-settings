@@ -9,6 +9,14 @@
         "--api-key",
         "<YOUR_CONTEXT7_API_KEY>"
       ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "sentry": {
+      "type": "http",
+      "url": "https://mcp.sentry.dev/mcp"
     }
   }
 }
