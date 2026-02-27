@@ -387,6 +387,8 @@ echo "settings.json と .mcp.json は手動でマージしてください。"
 
 ### 本家（nokonoko1203）のマージ
 
+simount 独自のカスタマイズ内容を確認: [GitHub で差分を表示](https://github.com/simount/claude-code-settings/compare/nokonoko1203:main...simount:main)
+
 ```bash
 # 初回セットアップ（1回のみ）
 git remote add upstream https://github.com/nokonoko1203/claude-code-settings.git
@@ -394,6 +396,10 @@ git remote add upstream https://github.com/nokonoko1203/claude-code-settings.git
 # upstream の変更を取り込み
 git fetch upstream
 git merge upstream/main --no-edit
+
+# simount 独自の変更をローカルで確認
+git diff upstream/main..main
+git log upstream/main..main --oneline
 ```
 
 > **注意:** `agents/backend-implementation-engineer.md` と `agents/frontend-implementation-engineer.md` は大幅に再構成されています（フレームワーク非依存化）。upstream マージ時にはこれらのファイルで手動コンフリクト解消が必要です。その他のファイルは軽微なコンフリクトで済むはずです。

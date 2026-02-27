@@ -389,6 +389,8 @@ echo "Review and merge settings.json and .mcp.json manually."
 
 ### Merging Upstream (nokonoko1203)
 
+To see what simount has customized compared to upstream: [View diff on GitHub](https://github.com/simount/claude-code-settings/compare/nokonoko1203:main...simount:main)
+
 ```bash
 # Initial setup (once)
 git remote add upstream https://github.com/nokonoko1203/claude-code-settings.git
@@ -396,6 +398,10 @@ git remote add upstream https://github.com/nokonoko1203/claude-code-settings.git
 # Merge upstream changes
 git fetch upstream
 git merge upstream/main --no-edit
+
+# View simount-specific changes locally
+git diff upstream/main..main
+git log upstream/main..main --oneline
 ```
 
 > **Note:** `agents/backend-implementation-engineer.md` and `agents/frontend-implementation-engineer.md` have been significantly restructured (framework-agnostic). These will require manual conflict resolution when merging upstream. Other files should have minimal conflicts.
