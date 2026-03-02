@@ -67,7 +67,7 @@ ln -s ~/.config/ccmanager ~/.claude/external/ccmanager
 
 ### Codex CLI Compatibility
 
-Codex CLI is made compatible by creating a symlink `.codex -> .claude` in each project root (see [Quick Setup](#download-all-common-files)). This allows Codex CLI to share the same directory as Claude Code without maintaining separate configuration files.
+Codex CLI is made compatible by creating a symlink `.agents -> .claude` in each project root (see [Quick Setup](#download-all-common-files)). This allows Codex CLI to share the same directory as Claude Code without maintaining separate configuration files.
 
 The `external/codex/` directory contains Codex-specific configuration that cannot be shared:
 
@@ -138,13 +138,15 @@ Defines global user guidelines. Contains the following content:
 
 Defines MCP (Model Context Protocol) servers available for use:
 
-| Server | Description |
-| --- | --- |
-| **context7** | Up-to-date documentation and code examples for libraries |
-| **chrome-devtools** | DevTools Protocol direct access (CPU/network emulation, etc.) |
-| **sentry** | AI-powered error analysis with Seer, natural language issue search |
+> **Policy:** MCP servers should be kept to a minimum. Each MCP server consumes context window tokens just by being enabled (tool definitions, instructions, etc.), reducing the space available for actual work. Only enable MCP servers when their functionality **cannot be replicated** by CLI tools, REST APIs, or built-in features. Prefer `curl`-based API calls or dedicated skills over MCP where possible.
 
-> **Note:** Browser automation uses **Playwright CLI** (`@playwright/cli`) instead of Playwright MCP for ~4x token reduction. See the `skills/playwright-cli/` skill for usage. Chrome DevTools MCP is kept for DevTools Protocol features not available through Playwright CLI.
+| Server | Description | Rationale |
+| --- | --- | --- |
+| **context7** | Up-to-date documentation and code examples for libraries | No equivalent CLI alternative for on-demand doc retrieval |
+| **chrome-devtools** | DevTools Protocol direct access (CPU/network emulation, etc.) | Performance profiling and network emulation require DevTools Protocol |
+| **sentry** | AI-powered error analysis with Seer, natural language issue search | MCP version provides richer functionality than the REST API alone |
+
+> **Note:** Browser automation uses **Playwright CLI** (`@playwright/cli`) instead of Playwright MCP for ~4x token reduction. See the `skills/playwright-cli/` skill for usage. Chrome DevTools MCP is kept only for DevTools Protocol features (performance traces, CPU throttling, etc.) not available through Playwright CLI.
 
 ### settings.json
 
@@ -212,7 +214,7 @@ Controls which MCP servers defined in `.mcp.json` are activated.
 - `enableAllProjectMcpServers`: true - Enable all project-specific MCP servers
 - `language`: "Japanese" - Interface language
 - `alwaysThinkingEnabled`: true - Always show thinking process
-- `enabledPlugins`: Playwright CLI plugin + LSP plugins for enhanced code intelligence (rust-analyzer, typescript, pyright)
+- `enabledPlugins`: Playwright CLI, LSP plugins (typescript, pyright), and skill-creator for skill development
 
 ### Custom Agents (agents/)
 
@@ -227,13 +229,13 @@ Custom agents provide specialized capabilities for specific development tasks. T
 
 ### Official Plugins
 
-Claude Code provides official LSP (Language Server Protocol) plugins for enhanced code intelligence. These are configured in `settings.json` under `enabledPlugins`.
+Claude Code provides official plugins for enhanced development workflows. These are configured in `settings.json` under `enabledPlugins`.
 
 | Plugin               | Description                                                |
 | -------------------- | ---------------------------------------------------------- |
-| `rust-analyzer-lsp`  | Rust language server for code navigation and analysis      |
 | `typescript-lsp`     | TypeScript/JavaScript language server                      |
 | `pyright-lsp`        | Python language server for type checking and analysis      |
+| `skill-creator`      | Create, evaluate, improve, and benchmark Claude Code skills |
 
 ### Skills (skills/)
 
@@ -293,7 +295,7 @@ done
 echo "Done. Review git diff to check for project-specific changes that need merging."
 
 # Create Codex CLI compatibility symlink
-ln -s .claude .codex
+ln -s .claude .agents
 ```
 
 > **Tip:** After downloading, use `git diff` to review changes. Settings files (`settings.json`, `.mcp.json`) may have project-specific customizations — merge as needed before committing.
@@ -371,7 +373,7 @@ cp -r "$SOURCE/skills/playwright-cli/" "$TARGET/skills/playwright-cli/"
 echo "Review and merge settings.json and .mcp.json manually."
 
 # Create Codex CLI compatibility symlink
-ln -s .claude .codex
+ln -s .claude .agents
 ```
 
 ### Merging Upstream (nokonoko1203)
