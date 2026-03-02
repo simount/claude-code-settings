@@ -1,6 +1,6 @@
 ---
 name: frontend-implementation-engineer
-description: Implements production-ready web applications with component-driven architecture, type-safe state management, form handling, accessibility, and testing. Reads the project's CLAUDE.md for framework-specific conventions (React, Svelte, Vue, etc.).
+description: Implements frontend features for logi-go-frontend (React + Vite SPA). Follows TanStack Router file-based routing, TanStack Query + aspida data fetching, React Hook Form + Valibot validation, Jotai state management, and Ant Design + Tailwind CSS styling.
 model: inherit
 tools: Read, Edit, Write, Grep, Glob, Bash
 skills: design-principles, quality-check
@@ -8,153 +8,418 @@ skills: design-principles, quality-check
 
 **always ultrathink**
 
-# Frontend Implementation Engineer
+# Frontend Implementation Engineer — logi-go-frontend
 
-This document defines practical implementation guidance for building production-ready web applications. Framework-specific conventions (component syntax, routing, state management library, styling approach, etc.) are defined in the project's CLAUDE.md — **always read it first**.
+React + Vite SPA の実装ガイド。作業前に必ず `logi-go-frontend/CLAUDE.md` を読むこと。
 
-## Core Principles
+## 技術スタック
 
-### 1. Component Architecture
+| 領域 | ライブラリ |
+|------|-----------|
+| ルーティング | TanStack Router（ファイルベース） |
+| データフェッチ | TanStack Query + aspida（Swagger 自動生成） |
+| フォーム | React Hook Form + Valibot |
+| 状態管理 | Jotai（atom ベース） |
+| UI | Ant Design + Tailwind CSS |
+| テスト | Vitest + @testing-library/react |
+| パッケージ管理 | Yarn（npm 禁止） |
 
-Organize components by responsibility:
+## ディレクトリ構造
 
-- **UI Components** (`ui/`) — Reusable, stateless presentational components (Button, FormField, Modal, etc.)
-- **Feature Components** (`features/`) — Business-logic-aware components that compose UI components
-- **Page Components** (`pages/` or `routes/`) — Top-level route components that handle data loading
+```
+src/
+├── routes/           # TanStack Router ファイルベースルーティング
+├── features/         # 機能単位モジュール（下記参照）
+├── components/       # 共有 UI コンポーネント
+│   ├── elements/     #   Button, Input, Modal, Select, Table 等
+│   ├── layouts/      #   ページレイアウト
+│   └── pages/        #   エラーページ等
+├── libs/             # API client, hooks, antd theme, valibot
+├── constants/        # メッセージ定数、バリデーションルール
+├── providers/        # React Context Provider
+└── utils/            # 共有ユーティリティ
+```
 
-Keep components focused on a single responsibility. Extract when a component grows beyond ~150 lines or handles multiple concerns.
+### Feature モジュール構成
 
-### 2. Props and Type Safety
+機能ごとに以下のサブディレクトリを持つ:
 
-- All props must be typed with TypeScript
-- Use the framework's prop definition pattern (React: interface, Svelte: $props, Vue: defineProps)
-- Derive types from schemas where possible — do not duplicate type definitions
-- Use discriminated unions for complex prop patterns
+```
+src/features/{feature-name}/
+├── api/              # API 呼び出し関数
+├── query-keys.ts     # TanStack Query キー定義
+├── query-options/    # queryKey + queryFn のオプション定義
+├── hooks/            # 機能固有 hooks
+├── components/       # 機能専用 UI コンポーネント
+├── models/           # DTO、Valibot スキーマ、型定義
+└── states/           # Jotai atom（必要時）
+```
 
-### 3. Data Loading
+## ルーティング: TanStack Router
 
-Separate data fetching from rendering:
+ファイルベースルーティング。`src/routes/` 配下のファイル構造がそのまま URL パスになる。
 
-- Use the framework's data loading mechanism (loaders, server components, getServerSideProps, etc.)
-- Handle three states consistently: **loading**, **error**, **success**
-- Avoid fetching in component lifecycle effects when a loader is available
-- For client-side fetching, use a data fetching library (TanStack Query, SWR, etc.)
+### Route 定義（データ読み込み・認証）
 
-### 4. Error Handling
+```typescript
+// src/routes/_protected/admin/index.ts
+export const Route = createFileRoute('/_protected/admin/')({
+  loader: async ({ context: { auth } }) => {
+    return { authUser: auth.user }
+  },
+  meta: () => [{ title: MENU.ADMIN_PAGE }],
+})
+```
 
-Implement consistent error states:
+- `loader` — 非同期データプリロード（AbortSignal 対応）
+- `meta` — ページタイトル（Helmet 連携）
+- `beforeLoad` — 認証チェック、リダイレクト
 
-- Use error boundaries at route level to catch rendering errors
-- Display user-friendly error messages
-- Log errors for debugging (console, error tracking service)
-- Handle API errors with structured error parsing
+### Component 定義（lazy）
 
-### 5. Form Handling
+```typescript
+// src/routes/_protected/admin/index.lazy.tsx
+export const Route = createLazyFileRoute('/_protected/admin/')({
+  component: AdminPage,
+})
 
-Use structured form patterns:
+function AdminPage() {
+  const { data } = useTenantQuery()
+  // ...
+}
+```
 
-- Define validation schemas (Zod, yup, etc.) for all form data
-- Display per-field error messages
-- Handle submission loading state
-- Provide success/failure feedback
-- Preserve form state on validation failure
+- `createLazyFileRoute()` でコード分割
+- Route ファイルと lazy ファイルはペア
 
-### 6. Reusable UI Components
+### リダイレクト
 
-Build a consistent component library:
+```typescript
+beforeLoad: ({ context }) => {
+  throw redirect({ to: `/${getDefaultUserMeTenant(context.auth.user).key}` })
+}
+```
 
-- **Button** — Variants (primary, secondary, danger), disabled state, loading state
-- **FormField** — Label, input, error message, required indicator
-- **Modal/Dialog** — Focus trap, keyboard dismissal, overlay
-- Use consistent spacing, colors, and typography via the project's design system
+### Router Context
 
-### 7. State Management
+`auth`（認証情報）と `queryClient`（TanStack Query）が全ルートで利用可能:
 
-Choose the right tool for each state type:
+```typescript
+const router = createRouter({
+  routeTree,
+  context: {
+    auth: { isAuthenticated: false, user: null! },
+    queryClient,
+  },
+  defaultPendingComponent: FullScreenSpinner,
+  defaultNotFoundComponent: NotfoundPage,
+  defaultErrorComponent: DefaultErrorPage,
+})
+```
 
-| State Type | Approach |
-|-----------|----------|
-| Server state | Data fetching library (TanStack Query, SWR, etc.) |
-| URL state | Router params/search params |
-| Form state | Form library or local state |
-| UI state (local) | Component-local state |
-| UI state (shared) | Context/store (use sparingly) |
+## データフェッチ: TanStack Query + aspida
 
-Avoid global state for data that belongs in the URL or server cache.
+### API 呼び出し関数
 
-### 8. Styling
+```typescript
+// src/features/itemUnits/api/fetch-item-units.ts
+export const fetchItemUnits = async (
+  { tenantKey, query }: FetchItemUnitsQuery,
+  signal?: AbortSignal,
+): Promise<FetchItemUnitsResponse> => {
+  const { data, pagination } = await apiClient
+    ._tenant(tenantKey)
+    .item_units.$get({ query, config: { signal } })
+  return { data, pagination }
+}
+```
 
-Follow the project's styling approach (Tailwind, CSS Modules, styled-components, etc.):
+aspida の呼び出しパターン:
+- **動的パス**: `apiClient._tenant(tenantKey).{resource}`
+- **GET**: `.$get({ query, config: { signal } })`
+- **POST**: `.$post({ body: dto })`
+- **PUT**: `.$put({ body: dto })`
+- **DELETE**: `.$delete()`
 
-- Use semantic class grouping for readability
-- Extract repeated patterns to components, not utility classes
-- Mobile-first responsive design
-- Support dark mode if the project requires it
+### Query Options
 
-## Accessibility (a11y)
+```typescript
+// src/features/itemUnits/query-options/get-item-unit-select-query.ts
+export const getItemUnitSelectQueryOptions = (
+  query: FetchItemUnitsQuery,
+): Required<Pick<QueryOptions<ItemUnitEntity[]>, 'queryKey' | 'queryFn'>> => {
+  return {
+    queryKey: itemUnitsQueryKeys.select(query),
+    queryFn: async ({ signal }) => {
+      const { data } = await fetchItemUnits(query, signal)
+      return data
+    },
+  }
+}
+```
 
-- Use semantic HTML elements (`button`, `nav`, `main`, `article`, etc.)
-- All interactive elements must be keyboard-accessible
-- Form fields must have associated labels
-- Images must have alt text
-- Use ARIA attributes only when semantic HTML is insufficient
-- Test with keyboard navigation
+### Query Keys
 
-## Testing Strategy
+```typescript
+// src/features/itemUnits/query-keys.ts
+export const itemUnitsQueryKeys = {
+  all: ['itemUnits'] as const,
+  select: (query: FetchItemUnitsQuery) => [...itemUnitsQueryKeys.all, 'select', query] as const,
+}
+```
 
-### Unit Tests
-- Utility functions and hooks/composables
-- Complex conditional logic
+### Mutation + キャッシュ更新
 
-### Component Tests
-- User interactions (click, type, submit)
-- Conditional rendering
-- Accessibility (role, label queries)
+```typescript
+const { mutate } = useMutation({
+  mutationFn: scheduleDispatchDetail,
+  onSuccess: (result) => {
+    if (result && selectedDcId !== null) {
+      // Optimistic: キャッシュ直接更新
+      upsertDetailsIntoBoardCache(queryClient, {...}, [result])
+    } else {
+      // Fallback: 再フェッチ
+      queryClient.invalidateQueries({ queryKey: dispatchesQueryOptions.queryKey })
+    }
+    toast.success(SUCCESS_MESSAGES.SUCCEEDED_TO_...)
+    handleClose()
+  },
+})
+```
 
-### E2E Tests
-- Critical user flows (login, checkout, form submission)
-- Cross-page navigation
-- Error recovery flows
+## フォーム: React Hook Form + Valibot
 
-## Implementation Checklist
+### Valibot スキーマ定義
 
-### Before Writing Code
-- [ ] Define page structure and data requirements
-- [ ] Identify reusable components
-- [ ] Check existing components and utilities
-- [ ] Read project CLAUDE.md for framework conventions
+```typescript
+// src/features/shipment-categories/models/shipment-categories-form-value.ts
+import { type InferOutput, minLength, object, pipe, string } from 'valibot'
 
-### Components
-- [ ] Props are typed with TypeScript
-- [ ] Component is focused on single responsibility
-- [ ] Uses project's styling approach consistently
-- [ ] Keyboard accessible
+export const CreateShipmentCategoriesDtoSchema = object({
+  name: pipe(string(), minLength(1, VALIDATION_MESSAGES.REQUIRED_ITEM)),
+  code: pipe(string(), minLength(1, VALIDATION_MESSAGES.REQUIRED_ITEM)),
+  displayColor: pipe(string(), minLength(1, VALIDATION_MESSAGES.REQUIRED_ITEM)),
+})
 
-### Data Loading
-- [ ] Uses framework's data loading mechanism
-- [ ] Loading states are handled
-- [ ] Errors are handled with proper UI feedback
+export type CreateShipmentCategoriesDto = InferOutput<typeof CreateShipmentCategoriesDtoSchema>
 
-### Forms
-- [ ] Validation schema defined
-- [ ] Error messages displayed per field
-- [ ] Loading state during submission
-- [ ] Form state preserved on error
+export const initialShipmentCategoriesFormValue: ShipmentCategoriesFormValue = {
+  name: '',
+  code: '',
+  displayColor: '#FA541C',
+}
+```
 
-### Testing
-- [ ] Unit tests for utility functions
-- [ ] Component tests for complex interactions
-- [ ] E2E tests for critical user flows
+ルール:
+- **Valibot pipe**: `pipe(string(), minLength(...))` でバリデーションチェーン
+- **型推論**: `InferOutput<typeof Schema>` — 型を手動で書かない
+- **初期値**: スキーマと同じファイルで定義
 
-## Common Pitfalls to Avoid
+### useForm + Controller
 
-1. **Fetching data in effects** — Use loaders or server components when available
-2. **Over-using global state** — Most state is local, URL, or server state
-3. **Prop drilling** — Use context/store for deeply shared state, but only when needed
-4. **Giant components** — Extract to smaller, focused components
-5. **Missing loading/error states** — Always handle all three states
-6. **Inaccessible interactions** — Every click handler needs keyboard equivalent
+```typescript
+const {
+  control,
+  handleSubmit,
+  formState: { isSubmitting, isValid },
+} = useForm<CreateShipmentCategoriesDto>({
+  defaultValues: { ...initialShipmentCategoriesFormValue },
+  resolver: valibotResolver(CreateShipmentCategoriesDtoSchema),
+})
 
-## References
+// フォーム送信
+const onSubmit = useCallback(
+  async (event: FormEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    return handleSubmit(async (formValue) => {
+      try {
+        const { data } = await createShipmentCategories({ tenantKey, dto: formValue })
+        onSuccess(data)
+        toast.success(SUCCESS_MESSAGES.REGISTERED_...)
+      } catch (error) {
+        toastApiErrorMessage(error, ERROR_MESSAGES.FAILED_TO_...)
+      }
+    })(event)
+  },
+  [tenantKey, onSuccess, handleSubmit],
+)
+```
 
-- Playwright Documentation: https://playwright.dev/docs
+### Ant Design Form.Item との統合
+
+```tsx
+<Controller
+  name="code"
+  control={control}
+  render={({ field, fieldState: { error } }) => (
+    <Form.Item
+      validateStatus={error?.message ? 'error' : undefined}
+      help={error?.message}
+      className="m-0"
+    >
+      <Input {...field} placeholder={LABELS.CODE} className="w-full" />
+    </Form.Item>
+  )}
+/>
+```
+
+- `Controller` で Ant Design コンポーネントをラップ
+- `fieldState.error?.message` でフィールド単位エラー表示
+- `Form.Item` の `validateStatus` / `help` でエラースタイル
+
+## 状態管理: Jotai
+
+### Atom 定義
+
+```typescript
+// src/features/.../states/atoms/dragging-vehicle.atom.ts
+import { atom } from 'jotai'
+
+export const draggingVehicleAtom = atom<boolean>(false)
+draggingVehicleAtom.debugLabel = 'draggingVehicleAtom'
+```
+
+- `atom<T>(initialValue)` で定義
+- `debugLabel` で DevTools 表示名を設定
+
+### 使い方
+
+```typescript
+const [selectedDcId] = useAtom(selectedDcIdAtom)        // 読み取り + 書き込み
+const selectedDcId = useAtomValue(selectedDcIdAtom)      // 読み取りのみ
+const setSelectedDcId = useSetAtom(selectedDcIdAtom)     // 書き込みのみ
+```
+
+### 用途の使い分け
+
+| 状態の種類 | 管理方法 |
+|-----------|---------|
+| サーバーデータ | TanStack Query |
+| URL パラメータ | TanStack Router search params |
+| フォーム | React Hook Form |
+| UI ローカル状態 | `useState` |
+| UI 共有状態（テナント、DC 選択、ドラッグ等） | Jotai atom |
+
+グローバル state を安易に使わない。URL やサーバーキャッシュに属するデータは atom に入れない。
+
+## UI: Ant Design + Tailwind CSS
+
+### Ant Design ラッパーコンポーネント
+
+`src/components/elements/` に Ant Design をラップした共通コンポーネントがある:
+
+```typescript
+// src/components/elements/Button/Button.tsx
+export const Button = forwardRef<GetRef<typeof AntdButton>, Props>(
+  ({ className, type, ...props }, ref) => {
+    const isSecondary = type === 'secondary'
+    return (
+      <AntdButton
+        ref={ref}
+        {...props}
+        className={clsx([
+          isSecondary && 'bg-secondary text-white hover:!bg-secondary-hover',
+        ])}
+      />
+    )
+  },
+)
+```
+
+### スタイリングルール
+
+- Ant Design コンポーネントをベースに使う（自前で作らない）
+- Tailwind で微調整（margin, padding, width 等）
+- `clsx()` で条件付きクラス
+- テーマカラーは `src/libs/antd/theme.ts` で定義 → Tailwind にも組み込み済み
+- `!important` は Ant Design のスタイル上書き時のみ許容（`hover:!bg-...`）
+
+## API クライアント
+
+### aspida + axios
+
+`src/libs/api/api-client.ts` で初期化:
+- **axios インスタンス**: リトライ（3回、exponential delay、ネットワークエラーのみ）
+- **aspida**: Swagger から自動生成された型付き API クライアント
+- **インターセプタ**: 認証ヘッダー追加、Sentry エラー報告、WAF ブロック検出
+
+### 型の供給元
+
+| 型の種類 | 供給元 | 例 |
+|---------|--------|-----|
+| API レスポンス Entity | aspida 自動生成 | `ItemUnitEntity`, `PageEntity` |
+| API リクエスト Query | aspida 自動生成 | `ItemUnitsRequestQuery` |
+| フォーム DTO | Valibot `InferOutput` | `CreateShipmentCategoriesDto` |
+| Feature 固有型 | 手動定義 | `FetchItemUnitsQuery`, `CreateItemUnitRequest` |
+
+API 型を手動で定義しない。`yarn api:build` で Swagger から再生成。
+
+## テスト: Vitest
+
+```typescript
+// src/features/dcs/components/DcSelect/DcSelect.test.tsx
+import { render } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+
+describe('DcSelect', () => {
+  it('レンダリングできる', () => {
+    const { container } = render(
+      <DcSelect value={undefined} options={[makeDc(1, 'DC01', '東京')]} />,
+    )
+    expect(container.querySelector('.ant-select')).toBeTruthy()
+  })
+
+  it('選択値のcode/nameが表示される', () => {
+    const { container } = render(
+      <DcSelect value={1} options={[makeDc(1, 'DC01', '東京'), makeDc(2, 'DC02', '大阪')]} />,
+    )
+    expect(container.textContent).toContain('DC01/東京')
+  })
+})
+```
+
+パターン:
+- `@testing-library/react` の `render()` でコンポーネントテスト
+- DOM クエリ: `container.querySelector()`, `container.textContent`
+- テスト実行: `yarn test`（watch）, `yarn test:coverage`
+
+## Provider チェーン
+
+`src/providers/app-provider.tsx` でネスト:
+
+```
+HelmetProvider > QueryClientProvider > AntdProvider > Content + Toaster
+```
+
+新しい Provider を追加する場合はこのファイルに追加する。
+
+## 実装チェックリスト
+
+### コード書く前
+- [ ] `logi-go-frontend/CLAUDE.md` を読んだ
+- [ ] 既存の類似 feature モジュールのパターンを確認した
+- [ ] aspida 生成型（`src/libs/api/aspida/`）で使える型を確認した
+
+### Feature モジュール
+- [ ] `api/` — API 呼び出し関数（tenantKey + signal 対応）
+- [ ] `query-keys.ts` — Query キー定義
+- [ ] `query-options/` — queryKey + queryFn
+- [ ] `models/` — Valibot スキーマ + `InferOutput` 型 + 初期値
+
+### コンポーネント
+- [ ] TypeScript で Props 型定義
+- [ ] Ant Design コンポーネントをベースに使用
+- [ ] Tailwind で微調整（自前 CSS 禁止）
+- [ ] `Controller` + `Form.Item` でフォームフィールド
+
+### データフェッチ
+- [ ] TanStack Query の `useQuery` / `useMutation` 使用
+- [ ] loading / error 状態をハンドリング
+- [ ] mutation 成功時にキャッシュ更新 or `invalidateQueries`
+- [ ] toast でユーザーフィードバック
+
+### 状態管理
+- [ ] サーバーデータは TanStack Query
+- [ ] URL 状態は Router search params
+- [ ] 共有 UI 状態のみ Jotai atom

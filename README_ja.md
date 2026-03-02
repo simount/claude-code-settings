@@ -65,7 +65,7 @@ ln -s ~/.config/ccmanager ~/.claude/external/ccmanager
 
 ### Codex CLI 互換
 
-各プロジェクトルートで `.codex -> .claude` のシンボリックリンクを作成することで Codex CLI と互換にしています（[クイックセットアップ](#共通ファイルを一括ダウンロード)を参照）。これにより、個別の設定ファイルを保守せずに Codex CLI が Claude Code と同じディレクトリを共有できます。
+各プロジェクトルートで `.agents -> .claude` のシンボリックリンクを作成することで Codex CLI と互換にしています（[クイックセットアップ](#共通ファイルを一括ダウンロード)を参照）。これにより、個別の設定ファイルを保守せずに Codex CLI が Claude Code と同じディレクトリを共有できます。
 
 `external/codex/` には共有できない Codex 固有の設定が含まれます：
 
@@ -136,13 +136,15 @@ Claude Code の組み込み機能である Plan Mode と AskUserQuestion を活�
 
 使用可能な MCP（Model Context Protocol）サーバーを定義します：
 
-| サーバー | 説明 |
-| --- | --- |
-| **context7** | ライブラリの最新ドキュメントとコード例 |
-| **chrome-devtools** | DevTools Protocol 直接アクセス（CPU/ネットワークエミュレーション等） |
-| **sentry** | Seer AI によるエラー分析、自然言語 Issue 検索 |
+> **方針:** MCP サーバーは最小限に抑えます。MCP サーバーは有効化するだけでコンテキストウィンドウのトークンを消費し（ツール定義、指示文等）、実作業に使える容量が減少します。CLI ツール、REST API、組み込み機能で**代替不可能**な場合のみ MCP サーバーを有効化してください。可能な限り `curl` ベースの API 呼び出しや専用スキルを優先します。
 
-> **注意:** ブラウザ自動化は **Playwright CLI**（`@playwright/cli`）を使用し、トークン消費を約4分の1に削減しています。`skills/playwright-cli/` スキルを参照してください。Chrome DevTools MCP は Playwright CLI では代替困難な DevTools Protocol 機能のために残しています。
+| サーバー | 説明 | 採用理由 |
+| --- | --- | --- |
+| **context7** | ライブラリの最新ドキュメントとコード例 | オンデマンドのドキュメント取得に代替 CLI がない |
+| **chrome-devtools** | DevTools Protocol 直接アクセス（CPU/ネットワークエミュレーション等） | パフォーマンスプロファイリングやネットワークエミュレーションに DevTools Protocol が必要 |
+| **sentry** | Seer AI によるエラー分析、自然言語 Issue 検索 | MCP 版は REST API 単体より高機能 |
+
+> **注意:** ブラウザ自動化は **Playwright CLI**（`@playwright/cli`）を使用し、トークン消費を約4分の1に削減しています。`skills/playwright-cli/` スキルを参照してください。Chrome DevTools MCP は DevTools Protocol 固有の機能（パフォーマンストレース、CPU スロットリング等）のためにのみ残しています。
 
 ### settings.json
 
@@ -210,7 +212,7 @@ Claude Code の動作を制御する設定ファイル：
 - `enableAllProjectMcpServers`: true - すべてのプロジェクト固有 MCP サーバーを有効化
 - `language`: "Japanese" - インターフェース言語
 - `alwaysThinkingEnabled`: true - 常に思考プロセスを表示
-- `enabledPlugins`: Playwright CLI プラグイン + コードインテリジェンス強化のための LSP プラグイン（rust-analyzer、typescript、pyright）
+- `enabledPlugins`: Playwright CLI、LSP プラグイン（typescript、pyright）、スキル開発用 skill-creator
 
 ### カスタムエージェント（agents/）
 
@@ -225,13 +227,13 @@ Claude Code の動作を制御する設定ファイル：
 
 ### 公式プラグイン
 
-Claude Code は、コードインテリジェンスを強化するための公式 LSP（Language Server Protocol）プラグインを提供しています。これらは `settings.json` の `enabledPlugins` で設定されます。
+Claude Code は、開発ワークフローを強化するための公式プラグインを提供しています。これらは `settings.json` の `enabledPlugins` で設定されます。
 
 | プラグイン           | 説明                                              |
 | -------------------- | ------------------------------------------------- |
-| `rust-analyzer-lsp`  | Rust 言語サーバー（コードナビゲーション・分析）   |
 | `typescript-lsp`     | TypeScript/JavaScript 言語サーバー                |
 | `pyright-lsp`        | Python 言語サーバー（型チェック・分析）           |
+| `skill-creator`      | Claude Code スキルの作成・評価・改善・ベンチマーク |
 
 ### スキル（skills/）
 
@@ -291,7 +293,7 @@ done
 echo "完了。git diff で変更を確認してください。"
 
 # Codex CLI 互換シンボリックリンクを作成
-ln -s .claude .codex
+ln -s .claude .agents
 ```
 
 > **ヒント:** ダウンロード後、`git diff` で変更を確認してください。設定ファイル（`settings.json`、`.mcp.json`）にはプロジェクト固有のカスタマイズが含まれる場合があります。コミット前に必要に応じてマージしてください。
@@ -369,7 +371,7 @@ cp -r "$SOURCE/skills/playwright-cli/" "$TARGET/skills/playwright-cli/"
 echo "settings.json と .mcp.json は手動でマージしてください。"
 
 # Codex CLI 互換シンボリックリンクを作成
-ln -s .claude .codex
+ln -s .claude .agents
 ```
 
 ### 本家（nokonoko1203）のマージ

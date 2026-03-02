@@ -35,17 +35,12 @@
       "Bash(tree:*)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(docker compose up -d --build:*)",
-      "Bash(osascript -e:*)"
+      "Bash(docker compose up -d --build:*)"
     ],
     "deny": [
       "Bash(sudo:*)",
       "Bash(rm:*)",
       "Bash(rm -rf:*)",
-      "Bash(git push:*)",
-      "Bash(git commit:*)",
-      "Bash(git reset:*)",
-      "Bash(git rebase:*)",
       "Bash(git rm:*)",
       "Bash(git clean:*)",
       "Read(.env.*)",
@@ -115,9 +110,9 @@
   },
   "enabledPlugins": {
     "playwright-cli@playwright-cli": true,
-    "rust-analyzer-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true
+    "pyright-lsp@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true
   },
   "language": "Japanese",
   "alwaysThinkingEnabled": true
