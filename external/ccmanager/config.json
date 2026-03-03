@@ -20,7 +20,7 @@
   },
   "command": {
     "command": "claude",
-    "args": ["--resume", "--mcp-config=~/.claude/.mcp.json"]
+    "args": ["--resume"]
   },
   "commandPresets": {
     "presets": [
