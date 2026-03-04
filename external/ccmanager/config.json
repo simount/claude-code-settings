@@ -10,7 +10,9 @@
   "statusHooks": {},
   "worktree": {
     "autoDirectory": true,
-    "autoDirectoryPattern": "~/worktrees/{branch}"
+    "autoDirectoryPattern": "~/worktrees/{branch}",
+    "copySessionData": true,
+    "sortByLastSession": false
   },
   "worktreeHooks": {
     "post_creation": {
@@ -20,27 +22,34 @@
   },
   "command": {
     "command": "claude",
-    "args": ["--resume"]
+    "args": [
+      "--resume"
+    ]
   },
   "commandPresets": {
     "presets": [
       {
         "id": "claude-yolo",
-        "name": "Claude Code (YOLO)",
+        "name": "Claude Code (YOLO new)",
         "command": "claude",
-        "args": ["--dangerously-skip-permissions"],
+        "args": [
+          "--dangerously-skip-permissions"
+        ],
         "fallbackArgs": []
       },
       {
         "id": "claude-yolo-resume",
         "name": "Claude Code (YOLO Resume)",
         "command": "claude",
-        "args": ["--resume", "--dangerously-skip-permissions"],
+        "args": [
+          "--resume",
+          "--dangerously-skip-permissions"
+        ],
         "fallbackArgs": []
       },
       {
         "id": "claude",
-        "name": "Claude Code",
+        "name": "Claude Code (new)",
         "command": "claude",
         "args": [],
         "fallbackArgs": []
@@ -49,11 +58,33 @@
         "id": "claude-resume",
         "name": "Claude Code (Resume)",
         "command": "claude",
-        "args": ["--resume"],
+        "args": [
+          "--resume"
+        ],
         "fallbackArgs": []
+      },
+      {
+        "id": "codex",
+        "name": "Codex (new)",
+        "command": "codex",
+        "detectionStrategy": "codex"
+      },
+      {
+        "id": "gemini-yolo",
+        "name": "Gemini (YOLO new)",
+        "command": "gemini",
+        "detectionStrategy": "gemini",
+        "args": [
+          "-y"
+        ]
       }
     ],
     "defaultPresetId": "claude-yolo",
     "selectPresetOnStart": true
+  },
+  "autoApproval": {
+    "enabled": true,
+    "timeout": 30,
+    "clearHistoryOnClear": false
   }
 }
