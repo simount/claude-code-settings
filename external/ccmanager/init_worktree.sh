@@ -1,10 +1,12 @@
-if [ -f "$CCMANAGER_GIT_ROOT/.env" ] && [ ! -f .env ]; then
-  cp "$CCMANAGER_GIT_ROOT/.env" .env
-fi
+# Copy all .env files from the git root to the worktree (skip node_modules)
+find "$CCMANAGER_GIT_ROOT" -name "*.env" -not -path "*/node_modules/*" | while read -r src; do
+  rel="${src#$CCMANAGER_GIT_ROOT/}"
+  dst="$CCMANAGER_WORKTREE_PATH/$rel"
+  if [ ! -f "$dst" ]; then
+    mkdir -p "$(dirname "$dst")"
+    cp "$src" "$dst"
+  fi
+done
 
 # Prepare the working directory as well
 mkdir -p "$CCMANAGER_WORKTREE_PATH/.tmp"
-
-# Existing startup and indexing
-code-insiders "$CCMANAGER_WORKTREE_PATH"
-uvx --from git+https://github.com/oraios/serena serena project index
