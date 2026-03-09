@@ -7,7 +7,24 @@
       "key": "escape"
     }
   },
-  "statusHooks": {},
+  "statusHooks": {
+    "idle": {
+      "command": "noti.exe -t \"Claude Code\" -m \"Session is now idle in $CCMANAGER_WORKTREE_BRANCH\"",
+      "enabled": false
+    },
+    "busy": {
+      "command": "noti.exe -t \"Claude Code\" -m \"Session is now busy on branch $CCMANAGER_WORKTREE_BRANCH\"",
+      "enabled": false
+    },
+    "waiting_input": {
+      "command": "noti.exe - t \"Claude Code\" -m \"Claude is waiting for your input in $CCMANAGER_WORKTREE_BRANCH branch\"",
+      "enabled": true
+    },
+    "pending_auto_approval": {
+      "command": "",
+      "enabled": true
+    }
+  },
   "worktree": {
     "autoDirectory": true,
     "autoDirectoryPattern": "~/worktrees/{branch}",
@@ -64,13 +81,40 @@
         "fallbackArgs": []
       },
       {
-        "id": "codex",
+        "id": "codex-yolo",
+        "name": "Codex (YOLO new)",
+        "command": "codex",
+        "args": [
+          "--ask-for-approval",
+          "never",
+          "--sandbox",
+          "danger-full-access"
+        ],
+        "fallbackArgs": [],
+        "detectionStrategy": "codex"
+      },
+      {
+        "id": "1772617547548",
         "name": "Codex (new)",
         "command": "codex",
         "detectionStrategy": "codex"
       },
       {
-        "id": "gemini-yolo",
+        "id": "codex-final-wapon-mode",
+        "name": "Codex Final Wapon Mode",
+        "command": "codex",
+        "detectionStrategy": "codex",
+        "args": [
+          "-m",
+          "gpt-5.4",
+          "-c",
+          "model_context_window=1000000",
+          "-c",
+          "model_auto_compact_token_limit=900000"
+        ]
+      },
+      {
+        "id": "1772617599608",
         "name": "Gemini (YOLO new)",
         "command": "gemini",
         "detectionStrategy": "gemini",
