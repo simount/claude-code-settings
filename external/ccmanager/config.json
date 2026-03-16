@@ -19,10 +19,6 @@
     "waiting_input": {
       "command": "noti.exe - t \"Claude Code\" -m \"Claude is waiting for your input in $CCMANAGER_WORKTREE_BRANCH branch\"",
       "enabled": true
-    },
-    "pending_auto_approval": {
-      "command": "",
-      "enabled": true
     }
   },
   "worktree": {
@@ -40,7 +36,9 @@
   "command": {
     "command": "claude",
     "args": [
-      "--resume"
+      "--resume",
+      "--permission-mode",
+      "auto"
     ]
   },
   "commandPresets": {
@@ -68,7 +66,10 @@
         "id": "claude",
         "name": "Claude Code (new)",
         "command": "claude",
-        "args": [],
+        "args": [
+          "--permission-mode",
+          "auto"
+        ],
         "fallbackArgs": []
       },
       {
@@ -76,7 +77,9 @@
         "name": "Claude Code (Resume)",
         "command": "claude",
         "args": [
-          "--resume"
+          "--resume",
+          "--permission-mode",
+          "auto"
         ],
         "fallbackArgs": []
       },
@@ -127,7 +130,7 @@
     "selectPresetOnStart": true
   },
   "autoApproval": {
-    "enabled": true,
+    "enabled": false,
     "timeout": 30,
     "clearHistoryOnClear": false
   }
